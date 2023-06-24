@@ -109,6 +109,10 @@ const char PID_NAME_0x5c[] PROGMEM = "Engine oil temperature";
 const char PID_NAME_0x5d[] PROGMEM = "Fuel injection timing";
 const char PID_NAME_0x5e[] PROGMEM = "Engine fuel rate";
 const char PID_NAME_0x5f[] PROGMEM = "Emission requirements to which vehicle is designed";
+const char PID_NAME_0x60[] PROGMEM = "PIDs supported [61 - 80]";
+const char PID_NAME_0x80[] PROGMEM = "PIDs supported [81 - A0]";
+const char PID_NAME_0xA0[] PROGMEM = "PIDs supported [A1 - C0]";
+const char PID_NAME_0xC0[] PROGMEM = "PIDs supported [C1 - E0]";
 
 const char* const PID_NAME_MAPPER[] PROGMEM = {
   PID_NAME_0x00,
@@ -207,6 +211,10 @@ const char* const PID_NAME_MAPPER[] PROGMEM = {
   PID_NAME_0x5d,
   PID_NAME_0x5e,
   PID_NAME_0x5f,
+  PID_NAME_0x60,
+  PID_NAME_0x80,
+  PID_NAME_0xA0,
+  PID_NAME_0xC0
 };
 
 const char PERCENTAGE[] PROGMEM = "%";
@@ -324,6 +332,10 @@ const char* const PID_UNIT_MAPPER[] PROGMEM = {
   DEGREES,
   LPH,
   NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL
 };
 
 OBD2Class::OBD2Class() :
@@ -339,7 +351,7 @@ OBD2Class::~OBD2Class()
 
 int OBD2Class::begin()
 {
-  if (!CAN.begin(500E3)) {
+  if (!CAN.begin(1000E3)) {
     return 0;
   }
 
@@ -393,16 +405,20 @@ bool OBD2Class::pidValueRaw(uint8_t pid)
     case AUXILIARY_INPUT_STATUS: // raw
     case FUEL_TYPE: // raw
     case EMISSION_REQUIREMENT_TO_WHICH_VEHICLE_IS_DESIGNED: // raw
+	case PIDS_SUPPORT_61_80:
+	case PIDS_SUPPORT_81_A0:
+	case PIDS_SUPPORT_A1_C0:
+	case PIDS_SUPPORT_C1_E0:
       return true;
 
     default:
-      return (pid > 0x5f);
+      return (pid > 0xC0);
   }
 }
 
 String OBD2Class::pidName(uint8_t pid)
 {
-  if (pid > 0x5f) {
+  if (pid > 0xC0) {
     return "Unknown";
   }
 
@@ -468,6 +484,10 @@ float OBD2Class::pidRead(uint8_t pid)
     case PIDS_SUPPORT_21_40: // raw
     case PIDS_SUPPORT_41_60: // raw
     case MONITOR_STATUS_THIS_DRIVE_CYCLE: // raw
+	case PIDS_SUPPORT_61_80:
+	case PIDS_SUPPORT_81_A0:
+	case PIDS_SUPPORT_A1_C0:
+	case PIDS_SUPPORT_C1_E0:	
       // NOTE: return value can lose precision!
       return ((uint32_t)A << 24 | (uint32_t)B << 16 | (uint32_t)C << 8 | (uint32_t)D);
 
@@ -693,35 +713,6 @@ int OBD2Class::supportedPidsRead()
   }
 
   return 1;
-}
-
-int OBD2Class::clearAllStoredDTC()
-{
-    //Function clears stored Diagnostic Trouble Codes (DTC)
-
-    // make sure at least 60 ms have passed since the last response
-    unsigned long lastResponseDelta = millis() - _lastPidResponseMillis;
-    if (lastResponseDelta < 60) {
-        delay(60 - lastResponseDelta);
-    }
-
-    for (int retries = 10; retries > 0; retries--) {
-        if (_useExtendedAddressing) {
-            CAN.beginExtendedPacket(0x18db33f1, 8);
-        } else {
-            CAN.beginPacket(0x7df, 8);
-        }
-        CAN.write(0x00); // number of additional bytes
-        CAN.write(0x04); // Mode / Service 4, for clearing DTC
-        if (CAN.endPacket()) {
-            // send success
-            break;
-        } else if (retries <= 1) {
-            return 0;
-        }
-    }
-
-    return 1;
 }
 
 int OBD2Class::pidRead(uint8_t mode, uint8_t pid, void* data, int length)

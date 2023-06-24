@@ -103,6 +103,11 @@ enum {
   FUEL_INJECTION_TIMING                             = 0x5d,
   ENGINE_FUEL_RATE                                  = 0x5e,
   EMISSION_REQUIREMENT_TO_WHICH_VEHICLE_IS_DESIGNED = 0x5f,
+  PIDS_SUPPORT_61_80                                = 0x60,
+  PIDS_SUPPORT_81_A0                                = 0x80,
+  PIDS_SUPPORT_A1_C0                                = 0xA0,
+  PIDS_SUPPORT_C1_E0                                = 0xC0
+  
 
   // more PIDs can be added from: https://en.wikipedia.org/wiki/OBD-II_PIDs
 };
@@ -130,8 +135,6 @@ public:
   String ecuNameRead();
 
   void setTimeout(unsigned long timeout);
-
-  int clearAllStoredDTC();
 
 private:
   int supportedPidsRead();
